@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.*
+!.env.example
+
+.gemini-quota.json
+.vision-cache.json
+
+npm-debug.log*

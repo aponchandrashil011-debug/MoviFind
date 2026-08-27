@@ -1,0 +1,889 @@
+/* ======================================================
+   🎬 MOVIFIND - FINAL RESPONSIVE CSS
+   STEP 2: MOBILE + DESKTOP RESPONSIVE FIX
+   ====================================================== */
+
+
+/* ======================================================
+   🔄 GLOBAL RESET
+   ====================================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    width: 100%;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+}
+
+body {
+    width: 100%;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: #0b1020;
+    color: #ffffff;
+    overflow-x: hidden;
+}
+
+img {
+    max-width: 100%;
+}
+
+button,
+input,
+select {
+    font-family: inherit;
+}
+
+
+/* ======================================================
+   🌐 NAVIGATION
+   ====================================================== */
+
+.navbar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 8%;
+    border-bottom: 1px solid #26304a;
+}
+
+.logo {
+    font-size: 28px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.logo span {
+    color: #ff3d71;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 25px;
+}
+
+.nav-links a {
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 16px;
+    white-space: nowrap;
+    transition: color 0.2s ease;
+}
+
+.nav-links a:hover {
+    color: #ff3d71;
+}
+
+
+/* ======================================================
+   🎬 HERO
+   ====================================================== */
+
+.hero {
+    width: 100%;
+    min-height: 480px;
+    text-align: center;
+    padding: 100px 20px 60px;
+    background: linear-gradient(
+        135deg,
+        #0b1020,
+        #161d35
+    );
+}
+
+.small-title {
+    color: #ff3d71;
+    font-size: 14px;
+    letter-spacing: 3px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+.hero h1 {
+    max-width: 1000px;
+    margin: 0 auto 25px;
+    font-size: 60px;
+    line-height: 1.1;
+}
+
+.description {
+    width: 100%;
+    max-width: 700px;
+    margin: auto;
+    color: #b8c0d9;
+    font-size: 18px;
+    line-height: 1.7;
+}
+
+
+/* ======================================================
+   🔎 SEARCH BOX
+   ====================================================== */
+
+.search-box {
+    width: 100%;
+    max-width: 800px;
+    margin: 35px auto 10px;
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    background: #ffffff;
+    padding: 6px;
+    border-radius: 12px;
+}
+
+.search-box input {
+    min-width: 0;
+    flex: 1;
+    width: 100%;
+    border: none;
+    outline: none;
+    padding: 15px;
+    font-size: 16px;
+    border-radius: 8px;
+    color: #111111;
+}
+
+.search-box button {
+    flex-shrink: 0;
+    border: none;
+    background: #ff3d71;
+    color: #ffffff;
+    padding: 0 25px;
+    min-height: 48px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.search-box button:hover {
+    background: #e62d60;
+}
+
+.search-box button:active {
+    transform: scale(0.98);
+}
+
+
+/* ======================================================
+   📦 RESULT
+   ====================================================== */
+
+#result {
+    width: 100%;
+    max-width: 100%;
+    margin-top: 15px;
+    font-size: 17px;
+    color: #b8c0d9;
+}
+
+.movifind-status {
+    width: 100%;
+    max-width: 800px;
+    margin: 15px auto;
+    padding: 12px 15px;
+    border-radius: 8px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.movifind-status.loading {
+    background: #161d35;
+    color: #b8c0d9;
+}
+
+.movifind-status.success {
+    background: #123b29;
+    color: #9ff0bf;
+}
+
+.movifind-status.error {
+    background: #3a1721;
+    color: #ff9caf;
+}
+
+.movifind-status.info {
+    background: #161d35;
+    color: #b8c0d9;
+}
+
+
+/* ======================================================
+   🎉 FOUND MESSAGE
+   ====================================================== */
+
+.movifind-found-message {
+    width: 100%;
+    max-width: 750px;
+    margin: 20px auto 10px;
+    padding: 10px 15px;
+    text-align: center;
+    color: #9ff0bf;
+    font-weight: bold;
+}
+
+
+/* ======================================================
+   🎬 MOVIE CARD
+   ====================================================== */
+
+.movie-card {
+    width: calc(100% - 30px);
+    max-width: 750px;
+    margin: 20px auto;
+    padding: 20px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    text-align: left;
+    background: #161d35;
+    border: 1px solid #ff3d71;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+
+/* ======================================================
+   🖼️ POSTER
+   ====================================================== */
+
+.movie-poster-wrapper {
+    flex: 0 0 110px;
+    width: 110px;
+}
+
+.movie-poster {
+    display: block;
+    width: 110px;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.poster-placeholder {
+    width: 110px;
+    height: 160px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #26304a;
+    border-radius: 10px;
+    font-size: 40px;
+}
+
+
+/* ======================================================
+   📝 MOVIE INFORMATION
+   ====================================================== */
+
+.movie-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.movie-info h2 {
+    margin-bottom: 10px;
+    color: #ffffff;
+    font-size: 24px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.movie-info p {
+    margin: 8px 0;
+    line-height: 1.5;
+}
+
+.movie-rating {
+    margin-bottom: 10px;
+}
+
+.movie-story {
+    margin-top: 20px;
+}
+
+.movie-story h3 {
+    margin-bottom: 8px;
+    color: #ffffff;
+}
+
+.movie-story p {
+    color: #b8c0d9;
+}
+
+
+/* ======================================================
+   📊 MOVIE DETAILS GRID
+   ====================================================== */
+
+.movie-details-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.detail-item {
+    min-width: 0;
+    padding: 10px;
+    background: #20283f;
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+}
+
+.detail-item strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #ffffff;
+    font-size: 13px;
+}
+
+.detail-item span {
+    display: block;
+    color: #b8c0d9;
+    font-size: 13px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+
+/* ======================================================
+   🎯 AI CONFIDENCE
+   ====================================================== */
+
+.movifind-ai-confidence {
+    margin: 10px 0;
+    padding: 9px 12px;
+    background: #20283f;
+    border-radius: 8px;
+    color: #b8c0d9;
+}
+
+.movifind-ai-confidence strong {
+    color: #ff3d71;
+}
+
+
+/* ======================================================
+   🔘 MOVIE BUTTONS
+   ====================================================== */
+
+.movie-buttons {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+.movie-buttons a,
+.movie-buttons button {
+    max-width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 9px 13px;
+    border: none;
+    background: #ff3d71;
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 12px;
+    cursor: pointer;
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
+    overflow-wrap: anywhere;
+}
+
+.movie-buttons a:hover,
+.movie-buttons button:hover {
+    opacity: 0.85;
+}
+
+.movie-buttons a:active,
+.movie-buttons button:active {
+    transform: scale(0.97);
+}
+
+
+/* ======================================================
+   🌐 WATCH LANGUAGE SELECTOR
+   ====================================================== */
+
+.movifind-watch-language {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 15px 0;
+}
+
+.movifind-watch-language label {
+    color: #ffffff;
+}
+
+.movifind-watch-language select {
+    max-width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #26304a;
+    outline: none;
+    cursor: pointer;
+}
+
+
+/* ======================================================
+   🤖 AI DETECTION
+   ====================================================== */
+
+.ai-detection-card {
+    width: calc(100% - 30px);
+    max-width: 750px;
+    margin: 15px auto;
+    padding: 15px;
+    background: #161d35;
+    border: 1px solid #26304a;
+    border-radius: 10px;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+}
+
+.ai-detection-card strong {
+    color: #ff3d71;
+}
+
+
+/* ======================================================
+   🖼️ IMAGE UPLOAD
+   ====================================================== */
+
+.upload-image-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 15px;
+    padding: 10px 18px;
+    background: #ff3d71;
+    color: #ffffff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: opacity 0.2s ease;
+}
+
+.upload-image-btn:hover {
+    opacity: 0.85;
+}
+
+#imagePreviewContainer {
+    width: 100%;
+    max-width: 500px;
+    margin: 15px auto 0;
+    display: none;
+    text-align: center;
+}
+
+#imagePreview {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: 500px;
+    height: auto;
+    margin: 0 auto;
+    border-radius: 10px;
+    border: 2px solid #26304a;
+    object-fit: contain;
+}
+
+
+/* ======================================================
+   ✨ FEATURES
+   ====================================================== */
+
+.features {
+    width: 100%;
+    max-width: 1200px;
+    margin: auto;
+    padding: 70px 20px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.feature-card {
+    min-width: 0;
+    background: #161d35;
+    padding: 30px 20px;
+    border: 1px solid #26304a;
+    border-radius: 15px;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-8px);
+    border-color: #ff3d71;
+}
+
+.icon {
+    font-size: 42px;
+    margin-bottom: 15px;
+}
+
+.feature-card h2 {
+    font-size: 20px;
+    margin-bottom: 12px;
+}
+
+.feature-card p {
+    color: #aab3cc;
+    line-height: 1.5;
+}
+
+
+/* ======================================================
+   📚 MOVIFIND LIBRARY
+   ====================================================== */
+
+#movifindLibrary {
+    width: calc(100% - 30px);
+    max-width: 1200px;
+    margin: 25px auto;
+    padding: 15px;
+    background: #17171d;
+    border: 1px solid #34343e;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+#movifindLibraryContent {
+    width: 100%;
+    overflow: hidden;
+}
+
+
+/* ======================================================
+   🦶 FOOTER
+   ====================================================== */
+
+footer {
+    width: 100%;
+    text-align: center;
+    padding: 35px 20px;
+    background: #070b16;
+    border-top: 1px solid #26304a;
+}
+
+footer h3 {
+    font-size: 25px;
+    margin-bottom: 10px;
+}
+
+footer p {
+    color: #aab3cc;
+    margin: 5px 0;
+    line-height: 1.5;
+}
+
+.copyright {
+    font-size: 13px;
+    margin-top: 15px;
+}
+
+
+/* ======================================================
+   💻 TABLET
+   800px AND BELOW
+   ====================================================== */
+
+@media (max-width: 800px) {
+
+    .navbar {
+        padding: 18px 5%;
+    }
+
+    .logo {
+        font-size: 25px;
+    }
+
+    .nav-links {
+        display: none;
+    }
+
+    .hero {
+        min-height: auto;
+        padding: 75px 20px 50px;
+    }
+
+    .hero h1 {
+        font-size: 44px;
+    }
+
+    .description {
+        font-size: 16px;
+    }
+
+    .features {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 50px 20px;
+    }
+
+    .movie-card {
+        width: calc(100% - 30px);
+    }
+}
+
+
+/* ======================================================
+   📱 MOBILE
+   600px AND BELOW
+   ====================================================== */
+
+@media (max-width: 600px) {
+
+    .navbar {
+        justify-content: center;
+        padding: 16px 15px;
+    }
+
+    .logo {
+        font-size: 24px;
+    }
+
+    .hero {
+        padding: 60px 15px 40px;
+    }
+
+    .small-title {
+        font-size: 12px;
+        letter-spacing: 2px;
+    }
+
+    .hero h1 {
+        font-size: 36px;
+        line-height: 1.15;
+    }
+
+    .description {
+        font-size: 15px;
+        line-height: 1.6;
+    }
+
+    .search-box {
+        flex-direction: column;
+        gap: 8px;
+        padding: 6px;
+        border-radius: 10px;
+    }
+
+    .search-box input {
+        width: 100%;
+        min-height: 48px;
+    }
+
+    .search-box button {
+        width: 100%;
+        min-height: 48px;
+        padding: 12px;
+    }
+
+    .movie-card {
+        width: calc(100% - 20px);
+        margin: 15px auto;
+        padding: 15px;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .movie-poster-wrapper {
+        flex: none;
+        width: 130px;
+    }
+
+    .movie-poster,
+    .poster-placeholder {
+        width: 130px;
+        height: 185px;
+        margin: 0 auto;
+    }
+
+    .movie-info {
+        width: 100%;
+    }
+
+    .movie-info h2 {
+        font-size: 21px;
+    }
+
+    .movie-details-grid {
+        grid-template-columns: 1fr;
+        text-align: left;
+    }
+
+    .movie-buttons {
+        justify-content: center;
+    }
+
+    .movie-buttons a,
+    .movie-buttons button {
+        flex: 1 1 calc(50% - 10px);
+        min-width: 120px;
+    }
+
+    .movifind-watch-language {
+        justify-content: center;
+    }
+
+    .movifind-watch-language select {
+        flex: 1;
+        min-width: 150px;
+    }
+
+    .features {
+        grid-template-columns: 1fr;
+        padding: 45px 15px;
+    }
+
+    .feature-card {
+        padding: 25px 18px;
+    }
+
+    #movifindLibrary {
+        width: calc(100% - 20px);
+        padding: 12px;
+    }
+
+    .ai-detection-card {
+        width: calc(100% - 20px);
+        text-align: center;
+    }
+
+    footer {
+        padding: 30px 15px;
+    }
+
+    footer h3 {
+        font-size: 22px;
+    }
+}
+
+
+/* ======================================================
+   📱 SMALL PHONE
+   400px AND BELOW
+   ====================================================== */
+
+@media (max-width: 400px) {
+
+    .hero h1 {
+        font-size: 31px;
+    }
+
+    .small-title {
+        font-size: 11px;
+    }
+
+    .description {
+        font-size: 14px;
+    }
+
+    .movie-card {
+        width: calc(100% - 12px);
+        padding: 12px;
+    }
+
+    .movie-poster,
+    .poster-placeholder {
+        width: 115px;
+        height: 165px;
+    }
+
+    .movie-poster-wrapper {
+        width: 115px;
+    }
+
+    .movie-info h2 {
+        font-size: 19px;
+    }
+
+    .movie-buttons {
+        gap: 7px;
+    }
+
+    .movie-buttons a,
+    .movie-buttons button {
+        flex: 1 1 100%;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .movifind-watch-language {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .movifind-watch-language select {
+        width: 100%;
+    }
+}
+
+
+/* ======================================================
+   ♿ ACCESSIBILITY / TOUCH
+   ====================================================== */
+
+@media (hover: none) {
+
+    .feature-card:hover {
+        transform: none;
+    }
+
+    .movie-buttons a:hover,
+    .movie-buttons button:hover,
+    .search-box button:hover {
+        opacity: 1;
+    }
+}
+
+
+/* ======================================================
+   🔒 PREVENT LONG TEXT BREAKING LAYOUT
+   ====================================================== */
+
+.movie-info,
+.detail-item,
+.ai-detection-card,
+.movifind-status,
+#result {
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+
+/* ======================================================
+   🎯 FINAL WIDTH SAFETY
+   ====================================================== */
+
+section,
+main,
+header,
+footer {
+    max-width: 100%;
+}
