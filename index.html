@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
 
@@ -11,599 +12,863 @@
     <title>MoviFind - AI Movie & Drama Detector</title>
 
     <style>
+
         /* =========================================================
-   MOVIFIND — NEW UI CSS
-   ========================================================= */
-
-* {
-    box-sizing: border-box;
-}
-
-html {
-    scroll-behavior: smooth;
-}
-
-body {
-    margin: 0;
-    padding: 0;
-    background: #0b0b0f;
-    color: #ffffff;
-    font-family: Arial, Helvetica, sans-serif;
-}
-
-/* =========================================================
-   HEADER
-   ========================================================= */
-
-.movifind-header {
-    background: #15151d;
-    border-bottom: 1px solid #30303a;
-    text-align: center;
-    padding: 18px 12px;
-}
-
-.movifind-header h1 {
-    margin: 0;
-    font-size: 28px;
-    font-weight: 700;
-    color: #ffffff;
-}
-
-.movifind-header p {
-    margin: 6px 0 0;
-    color: #aaaab8;
-    font-size: 13px;
-}
-
-/* =========================================================
-   MAIN CONTAINER
-   ========================================================= */
-
-.movifind-container {
-    width: 100%;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 22px 16px 60px;
-}
-
-/* =========================================================
-   UPLOAD AREA
-   ========================================================= */
-
-.upload-area {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.upload-label,
-.movifind-button {
-    min-height: 40px;
-    padding: 10px 16px;
-    border-radius: 7px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: 0.2s ease;
-}
-
-.upload-label {
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    background: #22222c;
-    border: 1px solid #444450;
-    color: #ffffff;
-}
-
-.upload-label:hover {
-    background: #30303b;
-    border-color: #5a5a68;
-}
-
-#imageInput {
-    display: none;
-}
-
-.movifind-button {
-    border: none;
-    color: #ffffff;
-    background: #9c22c4;
-}
-
-.movifind-button:hover {
-    background: #b52ddd;
-    transform: translateY(-1px);
-}
-
-.search-button {
-    background: #ff9800;
-    color: #111111;
-    font-weight: 700;
-}
-
-.search-button:hover {
-    background: #ffad2f;
-}
-
-/* =========================================================
-   IMAGE PREVIEW
-   ========================================================= */
-
-#imagePreviewContainer {
-    display: none;
-    text-align: center;
-    margin-top: 14px;
-}
-
-#imagePreview {
-    width: 90px;
-    height: 115px;
-    object-fit: cover;
-    border-radius: 8px;
-    border: 1px solid #ff9800;
-    display: inline-block;
-}
-
-/* =========================================================
-   AI DETECTION RESULT
-   ========================================================= */
-
-#detectedResult {
-    width: 100%;
-    margin-top: 12px;
-    text-align: center;
-}
-
-.ai-detection-card {
-    width: 100%;
-    max-width: 520px;
-    margin: 0 auto;
-    padding: 15px;
-    background: #15151c;
-    border: 1px solid #363640;
-    border-radius: 10px;
-    font-size: 12px;
-    line-height: 1.8;
-}
-
-.ai-detection-card strong {
-    color: #ff9800;
-}
-
-/* =========================================================
-   SEARCH AREA
-   ========================================================= */
-
-.search-area {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    margin-top: 18px;
-    flex-wrap: wrap;
-}
-
-#movieInput {
-    width: 460px;
-    max-width: 90vw;
-    padding: 11px 13px;
-    border-radius: 7px;
-    border: 1px solid #3d3d48;
-    background: #15151c;
-    color: #ffffff;
-    outline: none;
-    font-size: 12px;
-}
-
-#movieInput::placeholder {
-    color: #777783;
-}
-
-#movieInput:focus {
-    border-color: #ff9800;
-}
-
-/* =========================================================
-   RESULT AREA
-   ========================================================= */
-
-#result {
-    width: 100%;
-    margin-top: 18px;
-}
-
-.movifind-status {
-    text-align: center;
-    font-size: 13px;
-    margin: 12px 0;
-}
-
-.movifind-status.loading {
-    color: #dddddd;
-}
-
-.movifind-status.success {
-    color: #42e879;
-}
-
-.movifind-status.error {
-    color: #ff5577;
-}
-
-.movifind-found-message {
-    text-align: center;
-    color: #42e879;
-    font-size: 13px;
-    margin: 14px 0;
-}
-
-/* =========================================================
-   MOVIE / DRAMA CARD
-   ========================================================= */
-
-.movie-card {
-    width: 100%;
-    max-width: 900px;
-    margin: 25px auto 0;
-    padding: 18px;
-    background: #15151c;
-    border: 1px solid #34343f;
-    border-radius: 12px;
-    display: flex;
-    gap: 22px;
-    align-items: flex-start;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-}
-
-/* =========================================================
-   POSTER
-   ========================================================= */
-
-.movie-poster-wrapper {
-    flex: 0 0 210px;
-    text-align: center;
-}
-
-.movie-poster {
-    width: 210px;
-    max-height: 315px;
-    object-fit: cover;
-    border-radius: 9px;
-    display: block;
-    margin: 0 auto;
-}
-
-.poster-placeholder {
-    width: 210px;
-    height: 315px;
-    background: #24242d;
-    border-radius: 9px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 45px;
-    margin: auto;
-}
-
-/* =========================================================
-   MOVIE INFO
-   ========================================================= */
-
-.movie-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.movie-info h2 {
-    margin: 0 0 12px;
-    color: #ff9800;
-    font-size: 24px;
-    line-height: 1.3;
-}
-
-.movie-rating {
-    display: inline-block;
-    background: #302e1e;
-    color: #ffd84d;
-    padding: 6px 11px;
-    border-radius: 20px;
-    font-size: 12px;
-    margin-bottom: 12px;
-}
-
-.movifind-ai-confidence {
-    display: inline-block;
-    background: #222b24;
-    color: #64e88a;
-    padding: 6px 11px;
-    border-radius: 20px;
-    font-size: 12px;
-    margin: 0 0 12px 5px;
-}
-
-/* =========================================================
-   DETAILS GRID
-   ========================================================= */
-
-.movie-details-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 5px;
-}
-
-.detail-item {
-    background: #202027;
-    border: 1px solid #292933;
-    border-radius: 7px;
-    padding: 10px;
-    min-height: 50px;
-}
-
-.detail-item strong {
-    display: block;
-    color: #ff9800;
-    font-size: 11px;
-    margin-bottom: 4px;
-}
-
-.detail-item span {
-    display: block;
-    color: #ffffff;
-    font-size: 11px;
-    line-height: 1.45;
-    word-break: break-word;
-}
-
-/* =========================================================
-   STORY
-   ========================================================= */
-
-.movie-story {
-    margin-top: 13px;
-    background: #202027;
-    border: 1px solid #292933;
-    border-radius: 8px;
-    padding: 11px;
-}
-
-.movie-story h3 {
-    margin: 0 0 7px;
-    color: #ffffff;
-    font-size: 13px;
-}
-
-.movie-story p {
-    margin: 0;
-    color: #d5d5d5;
-    font-size: 12px;
-    line-height: 1.65;
-}
-
-/* =========================================================
-   MOVIE BUTTONS
-   ========================================================= */
-
-.movie-buttons {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 15px;
-}
-
-.movie-buttons a {
-    display: inline-block;
-    text-decoration: none;
-    background: #9c22c4;
-    color: #ffffff;
-    padding: 9px 13px;
-    border-radius: 6px;
-    font-size: 11px;
-    transition: 0.2s ease;
-}
-
-.movie-buttons a:hover {
-    background: #b52ddd;
-    transform: translateY(-1px);
-}
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
-@media (max-width: 700px) {
-
-    .movifind-header {
-        padding: 15px 10px;
-    }
-
-    .movifind-header h1 {
-        font-size: 23px;
-    }
-
-    .movifind-header p {
-        font-size: 11px;
-    }
-
-    .movifind-container {
-        padding: 18px 12px 45px;
-    }
-
-    .upload-area {
-        flex-direction: column;
-    }
-
-    .upload-label,
-    .movifind-button {
-        width: 100%;
-        max-width: 320px;
-    }
-
-    .search-area {
-        flex-direction: column;
-    }
-
-    #movieInput {
-        width: 100%;
-        max-width: 420px;
-    }
-
-    .search-button {
-        width: 100%;
-        max-width: 160px;
-    }
-
-    .movie-card {
-        flex-direction: column;
-        align-items: center;
-        padding: 14px;
-        gap: 16px;
-    }
-
-    .movie-poster-wrapper {
-        flex: none;
-    }
-
-    .movie-poster,
-    .poster-placeholder {
-        width: 190px;
-    }
-
-    .movie-poster {
-        max-height: 285px;
-    }
-
-    .poster-placeholder {
-        height: 285px;
-    }
-
-    .movie-info {
-        width: 100%;
-    }
-
-    .movie-info h2 {
-        text-align: center;
-        font-size: 21px;
-    }
-
-    .movie-rating,
-    .movifind-ai-confidence {
-        display: block;
-        width: fit-content;
-        margin: 5px auto;
-    }
-
-    .movie-details-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .movie-buttons {
-        justify-content: center;
-    }
-}
-
-/* =========================================================
-   VERY SMALL SCREEN
-   ========================================================= */
-
-@media (max-width: 380px) {
-
-    .movifind-container {
-        padding-left: 9px;
-        padding-right: 9px;
-    }
-
-    .movie-card {
-        padding: 11px;
-    }
-
-    .movie-poster,
-    .poster-placeholder {
-        width: 165px;
-    }
-
-    .movie-poster {
-        max-height: 250px;
-    }
-
-    .poster-placeholder {
-        height: 250px;
-    }
-}
-/* =========================================================
-   🎬 MOVIFIND NAVIGATION
-   ========================================================= */
-
-.movifind-nav {
-    width: 100%;
-    background: #101016;
-    border-bottom: 1px solid #30303a;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    gap: 7px;
-    padding: 10px 10px;
-
-    flex-wrap: wrap;
-
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-}
-
-.movifind-nav button {
-    border: 1px solid #383842;
-
-    background: #202027;
-    color: #ffffff;
-
-    padding: 8px 13px;
-
-    border-radius: 7px;
-
-    cursor: pointer;
-
-    font-size: 11px;
-
-    transition: 0.2s ease;
-}
-
-.movifind-nav button:hover {
-    background: #30303a;
-    border-color: #555562;
-    transform: translateY(-1px);
-}
-
-.movifind-nav button.active {
-    background: #9c22c4;
-    border-color: #b52ddd;
-}
-
-@media (max-width: 600px) {
-
-    .movifind-nav {
-        gap: 5px;
-        padding: 8px 6px;
-    }
-
-    .movifind-nav button {
-        padding: 7px 10px;
-        font-size: 10px;
-    }
-
-}
+           MOVIFIND — MAIN UI
+        ========================================================= */
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0b0b0f;
+            color: #ffffff;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        /* =========================================================
+           HEADER
+        ========================================================= */
+
+        .movifind-header {
+            background: #15151d;
+            border-bottom: 1px solid #30303a;
+            text-align: center;
+            padding: 18px 12px;
+        }
+
+        .movifind-header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .movifind-header p {
+            margin: 6px 0 0;
+            color: #aaaab8;
+            font-size: 13px;
+        }
+
+        /* =========================================================
+           NAVIGATION
+        ========================================================= */
+
+        .movifind-nav {
+            width: 100%;
+            background: #101016;
+            border-bottom: 1px solid #30303a;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            gap: 7px;
+            padding: 10px;
+
+            flex-wrap: wrap;
+
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .movifind-nav button {
+            border: 1px solid #383842;
+
+            background: #202027;
+            color: #ffffff;
+
+            padding: 8px 13px;
+
+            border-radius: 7px;
+
+            cursor: pointer;
+
+            font-size: 11px;
+
+            transition: 0.2s ease;
+        }
+
+        .movifind-nav button:hover {
+            background: #30303a;
+            border-color: #555562;
+            transform: translateY(-1px);
+        }
+
+        .movifind-nav button.active {
+            background: #9c22c4;
+            border-color: #b52ddd;
+        }
+
+        /* =========================================================
+           MAIN CONTAINER
+        ========================================================= */
+
+        .movifind-container {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 22px 16px 60px;
+        }
+
+        /* =========================================================
+           UPLOAD SECTION
+        ========================================================= */
+
+        .upload-section {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .upload-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+
+            flex-wrap: wrap;
+        }
+
+        .upload-label,
+        .movifind-button {
+            min-height: 40px;
+
+            padding: 10px 16px;
+
+            border-radius: 7px;
+
+            font-size: 12px;
+
+            cursor: pointer;
+
+            transition: 0.2s ease;
+        }
+
+        .upload-label {
+            display: inline-flex;
+
+            justify-content: center;
+            align-items: center;
+
+            background: #22222c;
+
+            border: 1px solid #444450;
+
+            color: #ffffff;
+        }
+
+        .upload-label:hover {
+            background: #30303b;
+            border-color: #5a5a68;
+        }
+
+        #imageInput,
+        #videoInput {
+            display: none;
+        }
+
+        .movifind-button {
+            border: none;
+
+            color: #ffffff;
+
+            background: #9c22c4;
+        }
+
+        .movifind-button:hover {
+            background: #b52ddd;
+
+            transform: translateY(-1px);
+        }
+
+        .search-button {
+            background: #ff9800;
+
+            color: #111111;
+
+            font-weight: 700;
+        }
+
+        .search-button:hover {
+            background: #ffad2f;
+        }
+
+        /* =========================================================
+           VIDEO UPLOAD INFO
+        ========================================================= */
+
+        .video-upload-info {
+            width: 100%;
+
+            text-align: center;
+
+            margin-top: 9px;
+
+            color: #8f8f9d;
+
+            font-size: 11px;
+        }
+
+        .video-upload-info strong {
+            color: #ff9800;
+        }
+
+        /* =========================================================
+           PREVIEW AREA
+        ========================================================= */
+
+        .preview-area {
+            width: 100%;
+
+            display: flex;
+
+            justify-content: center;
+            align-items: flex-start;
+
+            gap: 18px;
+
+            flex-wrap: wrap;
+
+            margin-top: 15px;
+        }
+
+        /* =========================================================
+           IMAGE PREVIEW
+        ========================================================= */
+
+        #imagePreviewContainer {
+            display: none;
+
+            text-align: center;
+        }
+
+        #imagePreview {
+            width: 90px;
+            height: 115px;
+
+            object-fit: cover;
+
+            border-radius: 8px;
+
+            border: 1px solid #ff9800;
+
+            display: block;
+        }
+
+        .preview-title {
+            margin: 6px 0 0;
+
+            color: #aaaab8;
+
+            font-size: 10px;
+        }
+
+        /* =========================================================
+           VIDEO PREVIEW
+        ========================================================= */
+
+        #videoPreviewContainer {
+            display: none;
+
+            width: 100%;
+
+            max-width: 600px;
+
+            text-align: center;
+        }
+
+        #videoPreview {
+            width: 100%;
+
+            max-width: 600px;
+
+            max-height: 400px;
+
+            background: #000000;
+
+            border-radius: 12px;
+
+            border: 1px solid #383842;
+
+            display: block;
+
+            margin: 0 auto;
+        }
+
+        .video-duration-status {
+            margin-top: 7px;
+
+            font-size: 11px;
+
+            color: #aaaab8;
+        }
+
+        .video-duration-status.valid {
+            color: #42e879;
+        }
+
+        .video-duration-status.invalid {
+            color: #ff5577;
+        }
+
+        /* =========================================================
+           DETECTION BUTTON AREA
+        ========================================================= */
+
+        .detect-buttons {
+            display: flex;
+
+            justify-content: center;
+            align-items: center;
+
+            gap: 10px;
+
+            flex-wrap: wrap;
+
+            margin-top: 15px;
+        }
+
+        .detect-buttons .movifind-button {
+            min-width: 180px;
+        }
+
+        /* =========================================================
+           AI DETECTION RESULT
+        ========================================================= */
+
+        #detectedResult {
+            width: 100%;
+
+            margin-top: 12px;
+
+            text-align: center;
+        }
+
+        .ai-detection-card {
+            width: 100%;
+
+            max-width: 520px;
+
+            margin: 0 auto;
+
+            padding: 15px;
+
+            background: #15151c;
+
+            border: 1px solid #363640;
+
+            border-radius: 10px;
+
+            font-size: 12px;
+
+            line-height: 1.8;
+        }
+
+        .ai-detection-card strong {
+            color: #ff9800;
+        }
+
+        /* =========================================================
+           SEARCH AREA
+        ========================================================= */
+
+        .search-area {
+            display: flex;
+
+            justify-content: center;
+            align-items: center;
+
+            gap: 8px;
+
+            margin-top: 18px;
+
+            flex-wrap: wrap;
+        }
+
+        #movieInput {
+            width: 460px;
+
+            max-width: 90vw;
+
+            padding: 11px 13px;
+
+            border-radius: 7px;
+
+            border: 1px solid #3d3d48;
+
+            background: #15151c;
+
+            color: #ffffff;
+
+            outline: none;
+
+            font-size: 12px;
+        }
+
+        #movieInput::placeholder {
+            color: #777783;
+        }
+
+        #movieInput:focus {
+            border-color: #ff9800;
+        }
+
+        /* =========================================================
+           RESULT AREA
+        ========================================================= */
+
+        #result {
+            width: 100%;
+
+            margin-top: 18px;
+        }
+
+        .movifind-status {
+            text-align: center;
+
+            font-size: 13px;
+
+            margin: 12px 0;
+        }
+
+        .movifind-status.loading {
+            color: #dddddd;
+        }
+
+        .movifind-status.success {
+            color: #42e879;
+        }
+
+        .movifind-status.error {
+            color: #ff5577;
+        }
+
+        .movifind-found-message {
+            text-align: center;
+
+            color: #42e879;
+
+            font-size: 13px;
+
+            margin: 14px 0;
+        }
+
+        /* =========================================================
+           MOVIE / DRAMA CARD
+        ========================================================= */
+
+        .movie-card {
+            width: 100%;
+
+            max-width: 900px;
+
+            margin: 25px auto 0;
+
+            padding: 18px;
+
+            background: #15151c;
+
+            border: 1px solid #34343f;
+
+            border-radius: 12px;
+
+            display: flex;
+
+            gap: 22px;
+
+            align-items: flex-start;
+
+            box-shadow:
+                0 8px 30px
+                rgba(0, 0, 0, 0.25);
+        }
+
+        /* =========================================================
+           POSTER
+        ========================================================= */
+
+        .movie-poster-wrapper {
+            flex: 0 0 210px;
+
+            text-align: center;
+        }
+
+        .movie-poster {
+            width: 210px;
+
+            max-height: 315px;
+
+            object-fit: cover;
+
+            border-radius: 9px;
+
+            display: block;
+
+            margin: 0 auto;
+        }
+
+        .poster-placeholder {
+            width: 210px;
+
+            height: 315px;
+
+            background: #24242d;
+
+            border-radius: 9px;
+
+            display: flex;
+
+            justify-content: center;
+            align-items: center;
+
+            font-size: 45px;
+
+            margin: auto;
+        }
+
+        /* =========================================================
+           MOVIE INFO
+        ========================================================= */
+
+        .movie-info {
+            flex: 1;
+
+            min-width: 0;
+        }
+
+        .movie-info h2 {
+            margin: 0 0 12px;
+
+            color: #ff9800;
+
+            font-size: 24px;
+
+            line-height: 1.3;
+        }
+
+        .movie-rating {
+            display: inline-block;
+
+            background: #302e1e;
+
+            color: #ffd84d;
+
+            padding: 6px 11px;
+
+            border-radius: 20px;
+
+            font-size: 12px;
+
+            margin-bottom: 12px;
+        }
+
+        .movifind-ai-confidence {
+            display: inline-block;
+
+            background: #222b24;
+
+            color: #64e88a;
+
+            padding: 6px 11px;
+
+            border-radius: 20px;
+
+            font-size: 12px;
+
+            margin: 0 0 12px 5px;
+        }
+
+        /* =========================================================
+           DETAILS GRID
+        ========================================================= */
+
+        .movie-details-grid {
+            display: grid;
+
+            grid-template-columns:
+                repeat(2, minmax(0, 1fr));
+
+            gap: 8px;
+
+            margin-top: 5px;
+        }
+
+        .detail-item {
+            background: #202027;
+
+            border: 1px solid #292933;
+
+            border-radius: 7px;
+
+            padding: 10px;
+
+            min-height: 50px;
+        }
+
+        .detail-item strong {
+            display: block;
+
+            color: #ff9800;
+
+            font-size: 11px;
+
+            margin-bottom: 4px;
+        }
+
+        .detail-item span {
+            display: block;
+
+            color: #ffffff;
+
+            font-size: 11px;
+
+            line-height: 1.45;
+
+            word-break: break-word;
+        }
+
+        /* =========================================================
+           STORY
+        ========================================================= */
+
+        .movie-story {
+            margin-top: 13px;
+
+            background: #202027;
+
+            border: 1px solid #292933;
+
+            border-radius: 8px;
+
+            padding: 11px;
+        }
+
+        .movie-story h3 {
+            margin: 0 0 7px;
+
+            color: #ffffff;
+
+            font-size: 13px;
+        }
+
+        .movie-story p {
+            margin: 0;
+
+            color: #d5d5d5;
+
+            font-size: 12px;
+
+            line-height: 1.65;
+        }
+
+        /* =========================================================
+           MOVIE BUTTONS
+        ========================================================= */
+
+        .movie-buttons {
+            display: flex;
+
+            gap: 8px;
+
+            flex-wrap: wrap;
+
+            margin-top: 15px;
+        }
+
+        .movie-buttons a {
+            display: inline-block;
+
+            text-decoration: none;
+
+            background: #9c22c4;
+
+            color: #ffffff;
+
+            padding: 9px 13px;
+
+            border-radius: 6px;
+
+            font-size: 11px;
+
+            transition: 0.2s ease;
+        }
+
+        .movie-buttons a:hover {
+            background: #b52ddd;
+
+            transform: translateY(-1px);
+        }
+
+        /* =========================================================
+           MOBILE
+        ========================================================= */
+
+        @media (max-width: 700px) {
+
+            .movifind-header {
+                padding: 15px 10px;
+            }
+
+            .movifind-header h1 {
+                font-size: 23px;
+            }
+
+            .movifind-header p {
+                font-size: 11px;
+            }
+
+            .movifind-container {
+                padding: 18px 12px 45px;
+            }
+
+            .upload-area {
+                flex-direction: column;
+            }
+
+            .upload-label,
+            .movifind-button {
+                width: 100%;
+
+                max-width: 320px;
+            }
+
+            .detect-buttons {
+                flex-direction: column;
+            }
+
+            .detect-buttons .movifind-button {
+                width: 100%;
+
+                max-width: 320px;
+            }
+
+            #videoPreviewContainer {
+                max-width: 100%;
+            }
+
+            #videoPreview {
+                max-height: 300px;
+            }
+
+            .search-area {
+                flex-direction: column;
+            }
+
+            #movieInput {
+                width: 100%;
+
+                max-width: 420px;
+            }
+
+            .search-button {
+                width: 100%;
+
+                max-width: 160px;
+            }
+
+            .movie-card {
+                flex-direction: column;
+
+                align-items: center;
+
+                padding: 14px;
+
+                gap: 16px;
+            }
+
+            .movie-poster-wrapper {
+                flex: none;
+            }
+
+            .movie-poster,
+            .poster-placeholder {
+                width: 190px;
+            }
+
+            .movie-poster {
+                max-height: 285px;
+            }
+
+            .poster-placeholder {
+                height: 285px;
+            }
+
+            .movie-info {
+                width: 100%;
+            }
+
+            .movie-info h2 {
+                text-align: center;
+
+                font-size: 21px;
+            }
+
+            .movie-rating,
+            .movifind-ai-confidence {
+                display: block;
+
+                width: fit-content;
+
+                margin: 5px auto;
+            }
+
+            .movie-details-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .movie-buttons {
+                justify-content: center;
+            }
+        }
+
+        /* =========================================================
+           VERY SMALL SCREEN
+        ========================================================= */
+
+        @media (max-width: 380px) {
+
+            .movifind-container {
+                padding-left: 9px;
+
+                padding-right: 9px;
+            }
+
+            .movie-card {
+                padding: 11px;
+            }
+
+            .movie-poster,
+            .poster-placeholder {
+                width: 165px;
+            }
+
+            .movie-poster {
+                max-height: 250px;
+            }
+
+            .poster-placeholder {
+                height: 250px;
+            }
+        }
+
     </style>
 </head>
 
+
 <body>
 
-    <!-- =========================================
+    <!-- =========================================================
          HEADER
-    ========================================= -->
+    ========================================================= -->
 
     <header class="movifind-header">
 
@@ -615,91 +880,206 @@ body {
 
     </header>
 
-<!-- =========================================================
-     🎬 MOVIFIND NAVIGATION
-     ========================================================= -->
 
-<nav class="movifind-nav">
+    <!-- =========================================================
+         NAVIGATION
+    ========================================================= -->
 
-    <button type="button" data-movifind-nav="home">
-        🏠 Home
-    </button>
+    <nav class="movifind-nav">
 
-    <button type="button" data-movifind-nav="favorites">
-        ❤️ Favorites
-    </button>
+        <button
+            type="button"
+            data-movifind-nav="home"
+        >
+            🏠 Home
+        </button>
 
-    <button type="button" data-movifind-nav="watchlist">
-        📺 Watchlist
-    </button>
+        <button
+            type="button"
+            data-movifind-nav="favorites"
+        >
+            ❤️ Favorites
+        </button>
 
-    <button type="button" data-movifind-nav="history">
-        🕘 History
-    </button>
+        <button
+            type="button"
+            data-movifind-nav="watchlist"
+        >
+            📺 Watchlist
+        </button>
 
-</nav>
+        <button
+            type="button"
+            data-movifind-nav="history"
+        >
+            🕘 History
+        </button>
 
-    <!-- =========================================
-         MAIN CONTAINER
-    ========================================= -->
+    </nav>
+
+
+    <!-- =========================================================
+         MAIN
+    ========================================================= -->
 
     <main class="movifind-container">
 
 
-        <!-- =====================================
-             UPLOAD + DETECT
-        ===================================== -->
+        <!-- =====================================================
+             UPLOAD SECTION
+        ===================================================== -->
 
-        <div class="upload-area">
-
-            <label
-                for="imageInput"
-                class="upload-label"
-            >
-                📁 Upload Movie / Drama Poster
-            </label>
-
-            <input
-                type="file"
-                id="imageInput"
-                accept="image/*"
-            >
-
-            <button
-                type="button"
-                id="detectButton"
-                class="movifind-button"
-            >
-                🤖 Detect Content
-            </button>
-
-        </div>
+        <section class="upload-section">
 
 
-        <!-- =====================================
-             IMAGE PREVIEW
-        ===================================== -->
+            <!-- =================================================
+                 UPLOAD OPTIONS
+            ================================================= -->
 
-        <div id="imagePreviewContainer">
-
-            <img
-                id="imagePreview"
-                alt="Selected poster preview"
-            >
-
-        </div>
+            <div class="upload-area">
 
 
-        <!-- =====================================
+                <!-- IMAGE UPLOAD -->
+
+                <label
+                    for="imageInput"
+                    class="upload-label"
+                >
+                    🖼️ Upload Movie / Drama Image
+                </label>
+
+                <input
+                    type="file"
+                    id="imageInput"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                >
+
+
+                <!-- VIDEO UPLOAD -->
+
+                <label
+                    for="videoInput"
+                    class="upload-label"
+                >
+                    🎬 Upload 5–8 Second Video
+                </label>
+
+                <input
+                    type="file"
+                    id="videoInput"
+                    accept="video/mp4,video/webm,video/ogg,video/quicktime"
+                >
+
+            </div>
+
+
+            <!-- =================================================
+                 VIDEO INFORMATION
+            ================================================= -->
+
+            <div class="video-upload-info">
+
+                Video must be
+                <strong>5–8 seconds</strong>
+                long.
+
+                Maximum upload size:
+                <strong>8 MB</strong>.
+
+            </div>
+
+
+            <!-- =================================================
+                 PREVIEW AREA
+            ================================================= -->
+
+            <div class="preview-area">
+
+
+                <!-- IMAGE PREVIEW -->
+
+                <div id="imagePreviewContainer">
+
+                    <img
+                        id="imagePreview"
+                        alt="Selected movie poster preview"
+                    >
+
+                    <div class="preview-title">
+                        Image Preview
+                    </div>
+
+                </div>
+
+
+                <!-- VIDEO PREVIEW -->
+
+                <div id="videoPreviewContainer">
+
+                    <video
+                        id="videoPreview"
+                        controls
+                        muted
+                        playsinline
+                        preload="metadata"
+                    ></video>
+
+                    <div
+                        id="videoDurationStatus"
+                        class="video-duration-status"
+                    >
+                        Video duration will appear here.
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 DETECTION BUTTONS
+            ================================================= -->
+
+            <div class="detect-buttons">
+
+
+                <!-- IMAGE DETECT -->
+
+                <button
+                    type="button"
+                    id="detectButton"
+                    class="movifind-button"
+                >
+                    🤖 Detect From Image
+                </button>
+
+
+                <!-- VIDEO DETECT -->
+
+                <button
+                    type="button"
+                    id="videoDetectButton"
+                    class="movifind-button"
+                >
+                    🎬 Detect From Video
+                </button>
+
+            </div>
+
+
+        </section>
+
+
+        <!-- =====================================================
              AI DETECTION RESULT
-        ===================================== -->
+        ===================================================== -->
 
         <div id="detectedResult"></div>
 
 
-        <!-- =====================================
-             SEARCH
-        ===================================== -->
+        <!-- =====================================================
+             SEARCH AREA
+        ===================================================== -->
 
         <div class="search-area">
 
@@ -721,9 +1101,9 @@ body {
         </div>
 
 
-        <!-- =====================================
+        <!-- =====================================================
              RESULT
-        ===================================== -->
+        ===================================================== -->
 
         <div id="result"></div>
 
@@ -731,11 +1111,13 @@ body {
     </main>
 
 
-    <!-- =========================================
+    <!-- =========================================================
          MOVIFIND FRONTEND SCRIPT
-    ========================================= -->
+    ========================================================= -->
 
     <script src="script.js"></script>
 
+
 </body>
+
 </html>
