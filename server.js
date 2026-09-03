@@ -46,8 +46,10 @@ const CACHE_FILE = path.join(__dirname, ".vision-cache.json");
 // ========================================
 
 const QUOTA_BLOCK_MS = 24 * 60 * 60 * 1000;
+const TRANSIENT_GEMINI_RETRY_MS = 60 * 1000;
+
 const MIN_CONFIDENCE_FOR_RETRY = 45;
-const MAX_VISION_ATTEMPTS = 2;
+const MAX_VISION_ATTEMPTS = 1;
 
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
 const MAX_VIDEO_SIZE = 8 * 1024 * 1024;
@@ -132,6 +134,112 @@ const ALLOWED_CONTENT_TYPES = [
 // ========================================
 
 let quotaBlockedUntil = 0;
+
+// ======================================================
+// ⚡ FAST OMDb MOVIE CACHE
+// ======================================================
+
+const movieCache = new Map();
+
+const MOVIE_CACHE_TTL =
+    10 * 60 * 1000;
+
+const movieRequestsInFlight =
+    new Map();
+
+
+// ======================================================
+// 🔑 CACHE KEY
+// ======================================================
+
+function getMovieCacheKey(
+    title,
+    type = "",
+    year = "",
+    language = ""
+) {
+
+    return [
+        title,
+        type,
+        year,
+        language
+    ]
+        .map(
+            value =>
+                String(value || "")
+                    .toLowerCase()
+                    .trim()
+        )
+        .join("|");
+}
+
+
+// ======================================================
+// 💾 GET CACHE
+// ======================================================
+
+function getMovieCache(key) {
+
+    const cached =
+        movieCache.get(key);
+
+    if (!cached) {
+        return null;
+    }
+
+    if (
+        Date.now() -
+        cached.time >
+        MOVIE_CACHE_TTL
+    ) {
+
+        movieCache.delete(key);
+
+        return null;
+    }
+
+    return cached.data;
+}
+
+
+// ======================================================
+// 💾 SET CACHE
+// ======================================================
+
+function setMovieCache(
+    key,
+    data
+) {
+
+    movieCache.set(
+        key,
+        {
+            time: Date.now(),
+            data
+        }
+    );
+
+
+    // Keep memory safe
+    if (
+        movieCache.size >
+        200
+    ) {
+
+        const firstKey =
+            movieCache
+                .keys()
+                .next()
+                .value;
+
+        if (firstKey) {
+            movieCache.delete(
+                firstKey
+            );
+        }
+    }
+}
 let visionCache = {};
 
 // ========================================
@@ -350,6 +458,26 @@ function blockGeminiQuota(durationMs = QUOTA_BLOCK_MS) {
 
     console.log("🚫 GEMINI QUOTA EXHAUSTED");
     console.log("⏳ Gemini temporarily blocked.");
+}
+
+function getGemini429Info(data) {
+    const message = String(
+        data?.error?.message || ""
+    ).toLowerCase();
+
+    const status = String(
+        data?.error?.status || ""
+    ).toLowerCase();
+
+    const dailyQuota =
+        /per day|daily|requests per day|rpd|quota.*day|day.*quota/
+            .test(message);
+
+    return {
+        dailyQuota,
+        status,
+        message
+    };
 }
 
 function getRemainingQuotaTime() {
@@ -680,6 +808,38 @@ app.get("/api/movie", async (req, res) => {
 
     const cleanMovieTitle = cleanTitle(title);
 
+    const cacheKey =
+    getMovieCacheKey(
+        cleanMovieTitle,
+        requestedType,
+        requestedYear,
+        requestedLanguage
+    );
+
+
+// ==================================================
+// ⚡ MEMORY CACHE
+// ==================================================
+
+const cachedMovie =
+    getMovieCache(
+        cacheKey
+    );
+
+if (cachedMovie) {
+
+    console.log(
+        "⚡ OMDb cache HIT:",
+        cleanMovieTitle
+    );
+
+    return res.json({
+        success: true,
+        cached: true,
+        movie: cachedMovie
+    });
+}
+
     try {
         let apiURL;
 
@@ -734,12 +894,18 @@ app.get("/api/movie", async (req, res) => {
             data.AIYear = requestedYear;
         }
 
-        if (requestedLanguage) {
+                if (requestedLanguage) {
             data.AILanguage = requestedLanguage;
         }
 
+        // ==================================================
+        // ⚡ SAVE OMDb RESULT TO CACHE
+        // ==================================================
+        setMovieCache(cacheKey, data);
+
         return res.json({
             success: true,
+            cached: false,
             movie: data
         });
 
@@ -1172,24 +1338,45 @@ No explanation.
 
                 if (response.status === 429) {
 
-                    console.error(
-                        "❌ GEMINI 429 / QUOTA"
-                    );
+    const quotaInfo =
+        getGemini429Info(data);
 
-                    blockGeminiQuota();
+    console.warn(
+        "⚠️ Gemini 429:",
+        quotaInfo.message
+    );
 
-                    return res.status(429).json({
-                        success: false,
-                        quota: true,
-                        blocked: true,
+    // Only block for a real daily quota exhaustion.
+    if (quotaInfo.dailyQuota) {
 
-                        message:
-                            "Gemini quota exhausted. Vision AI has been temporarily blocked.",
+        blockGeminiQuota();
 
-                        retryAfter:
-                            "24 hours"
-                    });
-                }
+        return res.status(429).json({
+            success: false,
+            quota: true,
+            blocked: true,
+
+            message:
+                "Gemini daily Vision quota has been exhausted.",
+
+            retryAfter:
+                "24 hours"
+        });
+    }
+
+    // Temporary rate limit.
+    return res.status(429).json({
+        success: false,
+        quota: true,
+        blocked: false,
+
+        message:
+            "Gemini Vision is temporarily rate limited.",
+
+        retryAfter:
+            "60 seconds"
+    });
+}
 
                 // ====================================
                 // OTHER ERROR
@@ -1703,21 +1890,46 @@ Allowed types:
                 );
 
                 if (response.status === 429) {
-                    console.error(
-                        "❌ GEMINI VIDEO 429 / QUOTA"
-                    );
 
-                    blockGeminiQuota();
+    const quotaInfo =
+        getGemini429Info(data);
 
-                    return res.status(429).json({
-                        success: false,
-                        quota: true,
-                        blocked: true,
-                        message:
-                            "Gemini quota exhausted. Vision AI has been temporarily blocked.",
-                        retryAfter: "24 hours"
-                    });
-                }
+    console.warn(
+        "⚠️ Gemini Video 429:",
+        quotaInfo.message
+    );
+
+    // Only block when the daily quota is actually exhausted.
+    if (quotaInfo.dailyQuota) {
+
+        blockGeminiQuota();
+
+        return res.status(429).json({
+            success: false,
+            quota: true,
+            blocked: true,
+
+            message:
+                "Gemini daily Vision quota has been exhausted.",
+
+            retryAfter:
+                "24 hours"
+        });
+    }
+
+    // Temporary rate limit.
+    return res.status(429).json({
+        success: false,
+        quota: true,
+        blocked: false,
+
+        message:
+            "Gemini Video is temporarily rate limited.",
+
+        retryAfter:
+            "60 seconds"
+    });
+}
 
                 if (!response.ok) {
                     lastError =

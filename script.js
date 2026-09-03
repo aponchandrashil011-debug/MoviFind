@@ -180,22 +180,101 @@ function setStatus(message, type = "info") {
 
 const movifindSearchCache = new Map();
 
+// ======================================================
+// ⚡ FAST SEARCH SYSTEM
+// Cache + Abort Previous Request + Request Protection
+// ======================================================
+
+const MOVIFIND_SEARCH_CACHE = new Map();
+
+let movifindSearchController = null;
+let movifindSearchRequestId = 0;
+
+const MOVIFIND_SEARCH_CACHE_TTL = 10 * 60 * 1000;
+
+
+// ======================================================
+// 🧹 SEARCH CACHE CLEANUP
+// ======================================================
+
+function getMoviFindCachedSearch(key) {
+
+    const cached =
+        MOVIFIND_SEARCH_CACHE.get(key);
+
+    if (!cached) {
+        return null;
+    }
+
+    if (
+        Date.now() - cached.time >
+        MOVIFIND_SEARCH_CACHE_TTL
+    ) {
+        MOVIFIND_SEARCH_CACHE.delete(key);
+        return null;
+    }
+
+    return cached.data;
+}
+
+
+// ======================================================
+// 💾 SAVE SEARCH CACHE
+// ======================================================
+
+function setMoviFindSearchCache(key, data) {
+
+    MOVIFIND_SEARCH_CACHE.set(
+        key,
+        {
+            time: Date.now(),
+            data: data
+        }
+    );
+
+    // Keep browser memory small
+    if (
+        MOVIFIND_SEARCH_CACHE.size >
+        50
+    ) {
+
+        const firstKey =
+            MOVIFIND_SEARCH_CACHE
+                .keys()
+                .next()
+                .value;
+
+        if (firstKey) {
+            MOVIFIND_SEARCH_CACHE.delete(
+                firstKey
+            );
+        }
+    }
+}
+
+
+// ======================================================
+// 🎬 FAST SEARCH MOVIE / DRAMA / SERIES
+// ======================================================
+
 async function searchMovie() {
 
-    const movieInput = getElement("movieInput");
+    const movieInput =
+        getElement("movieInput");
 
-    const result = getElement("result");
+    const result =
+        getElement("result");
 
     if (!movieInput) {
-
         console.error(
             "❌ movieInput element not found."
         );
-
         return;
     }
 
-    const query = movieInput.value.trim();
+    const query =
+        movieInput.value
+            .trim();
 
     if (!query) {
 
@@ -207,61 +286,192 @@ async function searchMovie() {
         return;
     }
 
+
+    // ==================================================
+    // 🔑 NORMALIZED CACHE KEY
+    // ==================================================
+
+    const cacheKey =
+        query
+            .toLowerCase()
+            .replace(/\s+/g, " ")
+            .trim();
+
+
+    // ==================================================
+    // ⚡ CACHE FIRST
+    // ==================================================
+
+    const cached =
+        getMoviFindCachedSearch(
+            cacheKey
+        );
+
+    if (cached) {
+
+        console.log(
+            "⚡ Search result loaded from cache:",
+            query
+        );
+
+        if (
+            cached.success &&
+            cached.movie
+        ) {
+
+            renderMovie(
+                cached.movie
+            );
+
+            return;
+        }
+    }
+
+
+    // ==================================================
+    // 🚫 CANCEL PREVIOUS SEARCH
+    // ==================================================
+
+    if (
+        movifindSearchController
+    ) {
+
+        movifindSearchController.abort();
+    }
+
+
+    movifindSearchController =
+        new AbortController();
+
+    const requestId =
+        ++movifindSearchRequestId;
+
+
+    // ==================================================
+    // ⏳ LOADING
+    // ==================================================
+
     if (result) {
 
         result.innerHTML = `
-
             <p class="movifind-status loading">
-
                 ⏳ Searching for
                 "<strong>${escapeHTML(query)}</strong>"...
-
             </p>
-
         `;
     }
 
+
     try {
 
-        const response = await fetch(
+        const response =
+            await fetch(
+                `${API_BASE}/api/movie?title=${encodeURIComponent(query)}`,
+                {
+                    method: "GET",
+                    signal:
+                        movifindSearchController
+                            .signal,
 
-            `${API_BASE}/api/movie?title=${encodeURIComponent(query)}`
+                    headers: {
+                        "Accept":
+                            "application/json"
+                    },
 
-        );
+                    cache: "no-store"
+                }
+            );
 
-        const data = await safeJSON(response);
 
-        if (!response.ok || !data.success) {
+        const data =
+            await safeJSON(
+                response
+            );
 
-            setStatus(
 
-                data.message ||
-                "Movie or series not found.",
+        // ==================================================
+        // 🚫 IGNORE OLD REQUEST
+        // ==================================================
 
-                "error"
+        if (
+            requestId !==
+            movifindSearchRequestId
+        ) {
 
+            console.log(
+                "⚠️ Ignored old search request:",
+                query
             );
 
             return;
         }
 
-        renderMovie(data.movie);
 
-    }
+        // ==================================================
+        // ❌ ERROR
+        // ==================================================
 
-    catch (error) {
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+
+            setStatus(
+                data.message ||
+                "Movie or series not found.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        // ==================================================
+        // 💾 CACHE RESULT
+        // ==================================================
+
+        if (data.movie) {
+
+            setMoviFindSearchCache(
+                cacheKey,
+                data
+            );
+        }
+
+
+        // ==================================================
+        // 🎬 RENDER
+        // ==================================================
+
+        renderMovie(
+            data.movie
+        );
+
+
+    } catch (error) {
+
+        if (
+            error?.name ===
+            "AbortError"
+        ) {
+
+            console.log(
+                "⚡ Previous search cancelled."
+            );
+
+            return;
+        }
+
 
         console.error(
             "❌ Search error:",
             error
         );
 
+
         setStatus(
-
             "Could not connect to MoviFind server.",
-
             "error"
-
         );
     }
 }
@@ -393,8 +603,9 @@ async function fetchMovie(name, detectedInfo = null) {
                     detectedInfo.confidence;
             }
         }
+            addMoviFindHistory(movie);
 
-        renderMovie(movie);
+            renderMovie(movie);
 
     }
 
@@ -1140,22 +1351,33 @@ function setupWatchLanguageSelector() {
     </a>
 
 
-    <!-- 🎬 WHERE TO WATCH -->
-
+        <!-- 🎬 WHERE TO WATCH -->
     <a
-
         href="${escapeAttribute(
             whereToWatchURL
         )}"
-
         target="_blank"
-
         rel="noopener noreferrer"
-
     >
-
         🎬 Where to Watch
+    </a>
 
+
+    <!-- ❤️ FAVORITE -->
+    <a
+        href="#"
+        data-movifind-favorite="true"
+    >
+        ❤️ Add to Favorites
+    </a>
+
+
+    <!-- 📺 WATCHLIST -->
+    <a
+        href="#"
+        data-movifind-watchlist="true"
+    >
+        📺 Add to Watchlist
     </a>
 
 
@@ -1171,6 +1393,48 @@ function setupWatchLanguageSelector() {
 
 
     // 🌐 Initialize video-language selector after the result card exists.
+
+    // ❤️ FAVORITE BUTTON
+    const favoriteButton =
+        result.querySelector(
+            '[data-movifind-favorite="true"]'
+        );
+
+    if (favoriteButton) {
+        favoriteButton.addEventListener(
+            "click",
+            function (event) {
+                event.preventDefault();
+                addMoviFindFavorite(movie);
+            }
+        );
+    }
+
+
+    // 📺 WATCHLIST BUTTON
+    const watchlistButton =
+        result.querySelector(
+            '[data-movifind-watchlist="true"]'
+        );
+
+    if (watchlistButton) {
+        watchlistButton.addEventListener(
+            "click",
+            function (event) {
+                event.preventDefault();
+                addMoviFindWatchlist(movie);
+            }
+        );
+    }
+
+
+    setupWatchLanguageSelector();
+
+    console.log(
+        "🎬 Rendered:",
+        movie.Title
+    );
+
     setupWatchLanguageSelector();
 
     console.log(
@@ -1191,9 +1455,7 @@ function setupWatchLanguageSelector() {
 // ======================================================
 
 const imageInput =
-    document.querySelector(
-        "input[type='file']:not([accept*='video'])"
-    );
+    getElement("imageInput");
 
 
 const previewContainer =
@@ -1333,10 +1595,22 @@ async function optimizeImageForVision(file) {
 
 async function handleVisionResult(response) {
     const data = await safeJSON(response);
+
     if (response.status === 429 || data.quota) {
-        setStatus(data.message || "Vision AI quota is temporarily exhausted.", "error");
-        return null;
-    }
+
+    console.warn(
+        "⚠️ Gemini Vision temporarily unavailable:",
+        data.message || "Rate limit reached"
+    );
+
+    setStatus(
+        "⚠️ AI Detection is temporarily unavailable. You can still search movies normally.",
+        "info"
+    );
+
+    return null;
+}
+
     if (!response.ok || !data.success) {
         setStatus(data.message || "AI could not identify this content.", "error");
         return null;
@@ -4330,11 +4604,189 @@ function initializeMoviFindLibrary() {
 // ======================================================
 // 3. RUN LIBRARY + NAVIGATION AFTER HTML IS READY
 // ======================================================
+// ======================================================
+// 🧭 MOVIFIND TOP NAVIGATION
+// ======================================================
 
+function setupMoviFindTopNavigation() {
+
+    const navButtons =
+        document.querySelectorAll(
+            "[data-movifind-nav]"
+        );
+
+    if (!navButtons.length) {
+        console.warn(
+            "⚠️ MoviFind navigation buttons not found."
+        );
+
+        return;
+    }
+
+
+    navButtons.forEach(
+        button => {
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    const target =
+                        this.getAttribute(
+                            "data-movifind-nav"
+                        );
+
+
+                    // ==========================================
+                    // 🏠 HOME
+                    // ==========================================
+
+                    if (
+                        target === "home"
+                    ) {
+
+                        navButtons.forEach(
+                            item =>
+                                item.classList.remove(
+                                    "active"
+                                )
+                        );
+
+                        this.classList.add(
+                            "active"
+                        );
+
+                        window.scrollTo({
+                            top: 0,
+                            behavior: "smooth"
+                        });
+
+                        return;
+                    }
+
+
+                    // ==========================================
+                    // 📚 LIBRARY
+                    // ==========================================
+
+                    const library =
+                        document.getElementById(
+                            "movifindLibrary"
+                        );
+
+                    if (!library) {
+
+                        console.warn(
+                            "⚠️ MoviFind library not found."
+                        );
+
+                        return;
+                    }
+
+
+                    // ==========================================
+                    // ACTIVE NAV
+                    // ==========================================
+
+                    navButtons.forEach(
+                        item =>
+                            item.classList.remove(
+                                "active"
+                            )
+                    );
+
+                    this.classList.add(
+                        "active"
+                    );
+
+
+                    // ==========================================
+                    // FIND LIBRARY TAB
+                    // ==========================================
+
+                    const tab =
+                        library.querySelector(
+                            `[data-library-tab="${target}"]`
+                        );
+
+
+                    if (tab) {
+
+                        tab.click();
+
+                    } else {
+
+                        console.warn(
+                            "⚠️ Library tab not found:",
+                            target
+                        );
+                    }
+
+
+                    // ==========================================
+                    // SCROLL
+                    // ==========================================
+
+                    setTimeout(
+                        function () {
+
+                            library.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start"
+                            });
+
+                        },
+                        50
+                    );
+                }
+            );
+        }
+    );
+}
 if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initializeMoviFindLibrary);
-} else {
-    initializeMoviFindLibrary();
+    document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        // ==========================================
+        // 📚 LIBRARY
+        // ==========================================
+
+        setupMoviFindLibraryStyles();
+
+        createMoviFindLibraryUI();
+
+        updateMoviFindLibraryUI();
+
+
+        // ==========================================
+        // 🧭 TOP NAVIGATION
+        // ==========================================
+
+        setupMoviFindTopNavigation();
+
+
+        // ==========================================
+        // 🏠 DEFAULT HOME
+        // ==========================================
+
+        const homeButton =
+            document.querySelector(
+                '[data-movifind-nav="home"]'
+            );
+
+        if (homeButton) {
+            homeButton.classList.add(
+                "active"
+            );
+        }
+
+
+        console.log(
+            "✅ MoviFind navigation initialized."
+        );
+    }
+);;
 }
 
 
