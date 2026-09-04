@@ -840,6 +840,38 @@ if (cachedMovie) {
     });
 }
 
+// ==================================================
+// ⚡ STEP 8 — DUPLICATE REQUEST DEDUPLICATION
+// ==================================================
+
+if (movieRequestsInFlight.has(cacheKey)) {
+    console.log(
+        "⚡ OMDb request already in-flight:",
+        cleanMovieTitle
+    );
+
+    try {
+        const existingResult =
+            await movieRequestsInFlight.get(cacheKey);
+
+        return res.json({
+            ...existingResult,
+            deduplicated: true
+        });
+    } catch (error) {
+        console.error(
+            "❌ Existing OMDb request failed:",
+            error.message
+        );
+
+        return res.status(502).json({
+            success: false,
+            message:
+                "Unable to load title information right now."
+        });
+    }
+}
+
     try {
         let apiURL;
 
