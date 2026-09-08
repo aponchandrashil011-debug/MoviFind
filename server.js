@@ -46,13 +46,11 @@ const CACHE_FILE = path.join(__dirname, ".vision-cache.json");
 // ========================================
 
 const QUOTA_BLOCK_MS = 24 * 60 * 60 * 1000;
-const TRANSIENT_GEMINI_RETRY_MS = 60 * 1000;
-
-const MIN_CONFIDENCE_FOR_RETRY = 45;
+const MIN_CONFIDENCE_FOR_RETRY = 60;
 const MAX_VISION_ATTEMPTS = 2;
 
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
-const MAX_VIDEO_SIZE = 8 * 1024 * 1024;
+const MAX_VIDEO_SIZE = 25 * 1024 * 1024;
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_SEARCH_LENGTH = 100;
@@ -134,112 +132,6 @@ const ALLOWED_CONTENT_TYPES = [
 // ========================================
 
 let quotaBlockedUntil = 0;
-
-// ======================================================
-// ⚡ FAST OMDb MOVIE CACHE
-// ======================================================
-
-const movieCache = new Map();
-
-const MOVIE_CACHE_TTL =
-    10 * 60 * 1000;
-
-const movieRequestsInFlight =
-    new Map();
-
-
-// ======================================================
-// 🔑 CACHE KEY
-// ======================================================
-
-function getMovieCacheKey(
-    title,
-    type = "",
-    year = "",
-    language = ""
-) {
-
-    return [
-        title,
-        type,
-        year,
-        language
-    ]
-        .map(
-            value =>
-                String(value || "")
-                    .toLowerCase()
-                    .trim()
-        )
-        .join("|");
-}
-
-
-// ======================================================
-// 💾 GET CACHE
-// ======================================================
-
-function getMovieCache(key) {
-
-    const cached =
-        movieCache.get(key);
-
-    if (!cached) {
-        return null;
-    }
-
-    if (
-        Date.now() -
-        cached.time >
-        MOVIE_CACHE_TTL
-    ) {
-
-        movieCache.delete(key);
-
-        return null;
-    }
-
-    return cached.data;
-}
-
-
-// ======================================================
-// 💾 SET CACHE
-// ======================================================
-
-function setMovieCache(
-    key,
-    data
-) {
-
-    movieCache.set(
-        key,
-        {
-            time: Date.now(),
-            data
-        }
-    );
-
-
-    // Keep memory safe
-    if (
-        movieCache.size >
-        200
-    ) {
-
-        const firstKey =
-            movieCache
-                .keys()
-                .next()
-                .value;
-
-        if (firstKey) {
-            movieCache.delete(
-                firstKey
-            );
-        }
-    }
-}
 let visionCache = {};
 
 // ========================================
@@ -460,26 +352,6 @@ function blockGeminiQuota(durationMs = QUOTA_BLOCK_MS) {
     console.log("⏳ Gemini temporarily blocked.");
 }
 
-function getGemini429Info(data) {
-    const message = String(
-        data?.error?.message || ""
-    ).toLowerCase();
-
-    const status = String(
-        data?.error?.status || ""
-    ).toLowerCase();
-
-    const dailyQuota =
-        /per day|daily|requests per day|rpd|quota.*day|day.*quota/
-            .test(message);
-
-    return {
-        dailyQuota,
-        status,
-        message
-    };
-}
-
 function getRemainingQuotaTime() {
     if (!isGeminiQuotaBlocked()) return 0;
 
@@ -637,9 +509,8 @@ app.use(
 const upload = multer({
     storage: multer.memoryStorage(),
 
-    // Image endpoint accepts one uploaded image.
     limits: {
-        fileSize: MAX_IMAGE_SIZE,
+        fileSize: MAX_VIDEO_SIZE,
         files: 1
     },
 
@@ -665,23 +536,6 @@ const upload = multer({
                     "Only JPG, PNG, WEBP, GIF, MP4, WEBM, MOV, AVI and MKV files are allowed."
                 )
             );
-        }
-    }
-});
-
-// Dedicated middleware for extracted video frames.
-// This is intentionally separate from the single-image endpoint.
-const videoFrameUpload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        fileSize: 8 * 1024 * 1024,
-        files: 5
-    },
-    fileFilter: (req, file, cb) => {
-        if (file?.mimetype?.startsWith("image/")) {
-            cb(null, true);
-        } else {
-            cb(new Error("Video frames must be image files."));
         }
     }
 });
@@ -716,7 +570,7 @@ app.get("/api/health", (req, res) => {
         videoUpload: true,
 
         maxImageSize: "8 MB",
-        maxVideoSize: "8 MB",
+        maxVideoSize: "25 MB",
 
         contentDetection:
             ALLOWED_CONTENT_TYPES
@@ -767,6 +621,42 @@ app.get("/api/vision/status", (req, res) => {
 });
 
 // ========================================
+// ⚡ FAST SEARCH CACHE + IN-FLIGHT DEDUPLICATION
+// ========================================
+
+const movieCache = new Map();
+const MOVIE_CACHE_TTL = 10 * 60 * 1000;
+const movieRequestsInFlight = new Map();
+
+function getMovieCacheKey(title, type = "", year = "", language = "") {
+    return [title, type, year, language]
+        .map(value => String(value || "").toLowerCase().trim())
+        .join("|");
+}
+
+function getMovieCache(key) {
+    const cached = movieCache.get(key);
+    if (!cached) return null;
+    if (Date.now() - cached.time > MOVIE_CACHE_TTL) {
+        movieCache.delete(key);
+        return null;
+    }
+    return cached.data;
+}
+
+function setMovieCache(key, data) {
+    movieCache.set(key, { time: Date.now(), data });
+    if (movieCache.size > 200) {
+        const firstKey = movieCache.keys().next().value;
+        if (firstKey) movieCache.delete(firstKey);
+    }
+}
+
+const searchCache = new Map();
+const SEARCH_CACHE_TTL = 15 * 60 * 1000;
+const searchRequestsInFlight = new Map();
+
+// ========================================
 // 🎬 OMDb MOVIE / DRAMA / SERIES
 // ========================================
 
@@ -775,22 +665,9 @@ app.get("/api/movie", async (req, res) => {
         .trim()
         .slice(0, MAX_TITLE_LENGTH);
 
-    const requestedType =
-        normalizeContentType(
-            req.query.type || ""
-        );
-
-    const requestedYear = String(
-        req.query.year || ""
-    )
-        .trim()
-        .slice(0, 10);
-
-    const requestedLanguage = String(
-        req.query.language || ""
-    )
-        .trim()
-        .slice(0, 50);
+    const requestedType = normalizeContentType(req.query.type || "");
+    const requestedYear = String(req.query.year || "").trim().slice(0, 10);
+    const requestedLanguage = String(req.query.language || "").trim().slice(0, 50);
 
     if (!title) {
         return res.status(400).json({
@@ -807,151 +684,87 @@ app.get("/api/movie", async (req, res) => {
     }
 
     const cleanMovieTitle = cleanTitle(title);
-
-    const cacheKey =
-    getMovieCacheKey(
+    const cacheKey = getMovieCacheKey(
         cleanMovieTitle,
         requestedType,
         requestedYear,
         requestedLanguage
     );
 
-
-// ==================================================
-// ⚡ MEMORY CACHE
-// ==================================================
-
-const cachedMovie =
-    getMovieCache(
-        cacheKey
-    );
-
-if (cachedMovie) {
-
-    console.log(
-        "⚡ OMDb cache HIT:",
-        cleanMovieTitle
-    );
-
-    return res.json({
-        success: true,
-        cached: true,
-        movie: cachedMovie
-    });
-}
-
-// ==================================================
-// ⚡ STEP 8 — DUPLICATE REQUEST DEDUPLICATION
-// ==================================================
-
-if (movieRequestsInFlight.has(cacheKey)) {
-    console.log(
-        "⚡ OMDb request already in-flight:",
-        cleanMovieTitle
-    );
-
-    try {
-        const existingResult =
-            await movieRequestsInFlight.get(cacheKey);
-
-        return res.json({
-            ...existingResult,
-            deduplicated: true
-        });
-    } catch (error) {
-        console.error(
-            "❌ Existing OMDb request failed:",
-            error.message
-        );
-
-        return res.status(502).json({
-            success: false,
-            message:
-                "Unable to load title information right now."
-        });
-    }
-}
-
-    try {
-        let apiURL;
-
-        if (
-            cleanMovieTitle
-                .toLowerCase()
-                .startsWith("tt")
-        ) {
-            apiURL =
-                `https://www.omdbapi.com/?apikey=${encodeURIComponent(
-                    OMDB_API_KEY
-                )}&i=${encodeURIComponent(
-                    cleanMovieTitle
-                )}&plot=full`;
-        } else {
-            apiURL =
-                `https://www.omdbapi.com/?apikey=${encodeURIComponent(
-                    OMDB_API_KEY
-                )}&t=${encodeURIComponent(
-                    cleanMovieTitle
-                )}&plot=full`;
-        }
-
-        const response = await fetch(apiURL);
-        const data = await response.json();
-
-        if (data.Response === "False") {
-            return res.json({
-                success: false,
-                message:
-                    data.Error ||
-                    "Movie or series not found."
-            });
-        }
-
-        if (
-            requestedType &&
-            requestedType !== "unknown"
-        ) {
-            data.AIType = requestedType;
-            data.AITypeLabel =
-                displayContentType(requestedType);
-        } else {
-            data.AIType =
-                normalizeContentType(data.Type);
-
-            data.AITypeLabel =
-                displayContentType(data.Type);
-        }
-
-        if (requestedYear) {
-            data.AIYear = requestedYear;
-        }
-
-                if (requestedLanguage) {
-            data.AILanguage = requestedLanguage;
-        }
-
-        // ==================================================
-        // ⚡ SAVE OMDb RESULT TO CACHE
-        // ==================================================
-        setMovieCache(cacheKey, data);
-
+    const cachedMovie = getMovieCache(cacheKey);
+    if (cachedMovie) {
         return res.json({
             success: true,
-            cached: false,
-            movie: data
+            cached: true,
+            movie: cachedMovie
         });
+    }
 
+    if (movieRequestsInFlight.has(cacheKey)) {
+        try {
+            const result = await movieRequestsInFlight.get(cacheKey);
+            return res.json({ ...result, deduplicated: true });
+        } catch (error) {
+            console.error("❌ Shared OMDb request failed:", error?.message || error);
+            return res.status(502).json({
+                success: false,
+                message: "Unable to load title information right now."
+            });
+        }
+    }
+
+    const requestPromise = (async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        try {
+            const idOrTitle = cleanMovieTitle.toLowerCase().startsWith("tt")
+                ? `i=${encodeURIComponent(cleanMovieTitle)}`
+                : `t=${encodeURIComponent(cleanMovieTitle)}`;
+
+            const apiURL = `https://www.omdbapi.com/?apikey=${encodeURIComponent(OMDB_API_KEY)}&${idOrTitle}&plot=full`;
+            const response = await fetch(apiURL, {
+                method: "GET",
+                headers: { "Accept": "application/json" },
+                signal: controller.signal
+            });
+
+            const data = await response.json();
+
+            if (data.Response === "False") {
+                return { success: false, message: data.Error || "Movie or series not found." };
+            }
+
+            if (requestedType && requestedType !== "unknown") {
+                data.AIType = requestedType;
+                data.AITypeLabel = displayContentType(requestedType);
+            } else {
+                data.AIType = normalizeContentType(data.Type);
+                data.AITypeLabel = displayContentType(data.Type);
+            }
+
+            if (requestedYear) data.AIYear = requestedYear;
+            if (requestedLanguage) data.AILanguage = requestedLanguage;
+
+            setMovieCache(cacheKey, data);
+            return { success: true, cached: false, movie: data };
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    })();
+
+    movieRequestsInFlight.set(cacheKey, requestPromise);
+
+    try {
+        return res.json(await requestPromise);
     } catch (error) {
-        console.error(
-            "❌ Movie API Error:",
-            error.message
-        );
-
+        console.error("❌ Movie API Error:", error?.name === "AbortError" ? "OMDb request timed out." : error?.message || error);
         return res.status(502).json({
             success: false,
-            message:
-                "Unable to load title information right now."
+            message: error?.name === "AbortError" ? "Movie service took too long to respond." : "Unable to load title information right now."
         });
+    } finally {
+        movieRequestsInFlight.delete(cacheKey);
     }
 });
 
@@ -965,62 +778,75 @@ app.get("/api/search", async (req, res) => {
         .slice(0, MAX_SEARCH_LENGTH);
 
     if (!title) {
-        return res.status(400).json({
-            success: false,
-            message: "Search title is required.",
-            results: []
-        });
+        return res.status(400).json({ success: false, message: "Search title is required.", results: [] });
     }
 
     if (!OMDB_API_KEY) {
-        return res.status(500).json({
-            success: false,
-            message: "OMDb service is not configured.",
-            results: []
-        });
+        return res.status(500).json({ success: false, message: "OMDb service is not configured.", results: [] });
     }
 
-    try {
-        const apiURL =
-            `https://www.omdbapi.com/?apikey=${encodeURIComponent(
-                OMDB_API_KEY
-            )}&s=${encodeURIComponent(title)}`;
+    const cacheKey = title.toLowerCase().replace(/\s+/g, " ").trim();
+    const cached = searchCache.get(cacheKey);
 
-        const response = await fetch(apiURL);
-        const data = await response.json();
+    if (cached && Date.now() - cached.time <= SEARCH_CACHE_TTL) {
+        return res.json({ success: true, cached: true, results: cached.results });
+    }
 
-        if (data.Response === "False") {
-            return res.json({
-                success: false,
-                message:
-                    data.Error ||
-                    "No movies or series found.",
-                results: []
-            });
+    if (cached) searchCache.delete(cacheKey);
+
+    if (searchRequestsInFlight.has(cacheKey)) {
+        try {
+            const results = await searchRequestsInFlight.get(cacheKey);
+            return res.json({ success: true, deduplicated: true, results });
+        } catch (error) {
+            console.error("❌ Shared search request failed:", error?.message || error);
+            return res.status(502).json({ success: false, message: "Search service is temporarily unavailable.", results: [] });
         }
+    }
 
-        const results =
-            Array.isArray(data.Search)
-                ? data.Search.slice(0, 10)
-                : [];
+    const requestPromise = (async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-        return res.json({
-            success: true,
-            results
-        });
+        try {
+            const apiURL = `https://www.omdbapi.com/?apikey=${encodeURIComponent(OMDB_API_KEY)}&s=${encodeURIComponent(title)}`;
+            const response = await fetch(apiURL, {
+                method: "GET",
+                headers: { "Accept": "application/json" },
+                signal: controller.signal
+            });
+            const data = await response.json();
+            if (data.Response === "False") return [];
 
+            const results = Array.isArray(data.Search) ? data.Search.slice(0, 10) : [];
+            searchCache.set(cacheKey, { time: Date.now(), results });
+            if (searchCache.size > 200) {
+                const firstKey = searchCache.keys().next().value;
+                if (firstKey) searchCache.delete(firstKey);
+            }
+            return results;
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    })();
+
+    searchRequestsInFlight.set(cacheKey, requestPromise);
+
+    try {
+        const results = await requestPromise;
+        if (!results.length) {
+            return res.json({ success: false, message: "No movies or series found.", results: [] });
+        }
+        return res.json({ success: true, cached: false, results });
     } catch (error) {
-        console.error(
-            "❌ Search API Error:",
-            error.message
-        );
-
+        console.error("❌ Search API Error:", error?.name === "AbortError" ? "OMDb search timed out." : error?.message || error);
         return res.status(502).json({
             success: false,
-            message:
-                "Search service is temporarily unavailable.",
+            message: error?.name === "AbortError" ? "Search service took too long to respond." : "Search service is temporarily unavailable.",
             results: []
         });
+    } finally {
+        searchRequestsInFlight.delete(cacheKey);
     }
 });
 
@@ -1370,45 +1196,24 @@ No explanation.
 
                 if (response.status === 429) {
 
-    const quotaInfo =
-        getGemini429Info(data);
+                    console.error(
+                        "❌ GEMINI 429 / QUOTA"
+                    );
 
-    console.warn(
-        "⚠️ Gemini 429:",
-        quotaInfo.message
-    );
+                    blockGeminiQuota();
 
-    // Only block for a real daily quota exhaustion.
-    if (quotaInfo.dailyQuota) {
+                    return res.status(429).json({
+                        success: false,
+                        quota: true,
+                        blocked: true,
 
-        blockGeminiQuota();
+                        message:
+                            "Gemini quota exhausted. Vision AI has been temporarily blocked.",
 
-        return res.status(429).json({
-            success: false,
-            quota: true,
-            blocked: true,
-
-            message:
-                "Gemini daily Vision quota has been exhausted.",
-
-            retryAfter:
-                "24 hours"
-        });
-    }
-
-    // Temporary rate limit.
-    return res.status(429).json({
-        success: false,
-        quota: true,
-        blocked: false,
-
-        message:
-            "Gemini Vision is temporarily rate limited.",
-
-        retryAfter:
-            "60 seconds"
-    });
-}
+                        retryAfter:
+                            "24 hours"
+                    });
+                }
 
                 // ====================================
                 // OTHER ERROR
@@ -1709,7 +1514,7 @@ No explanation.
 
 app.post(
     "/api/vision-frames",
-    videoFrameUpload.array("images", 5),
+    upload.array("images", 5),
     async (req, res) => {
         console.log("\n🎥 Video frame Vision request received");
 
@@ -1804,15 +1609,23 @@ K-Drama
 C-Drama
 Thai Drama
 
-Analyze ALL frames together and prioritize the strongest recurring clues:
+Analyze ALL frames together and use recurring visual clues:
 - visible title text
-- original-language title / transliteration
+- original-language title
+- English title
+- transliteration
 - actor and actress faces
-- recognizable characters and scenes
-- logos / network / platform branding
-- distinctive costumes, locations and artwork
-- country and language
-- release year or season clues when visible
+- characters
+- costumes
+- logos
+- network/platform branding
+- production company
+- locations
+- recognizable scenes
+- release year clues
+- country
+- language
+- franchise/season clues
 
 Important:
 - Do not invent a title.
@@ -1892,7 +1705,7 @@ Allowed types:
 
                     generationConfig: {
                         responseMimeType: "application/json",
-                        maxOutputTokens: 160,
+                        maxOutputTokens: 256,
                         temperature: 0
                     }
                 };
@@ -1922,46 +1735,21 @@ Allowed types:
                 );
 
                 if (response.status === 429) {
+                    console.error(
+                        "❌ GEMINI VIDEO 429 / QUOTA"
+                    );
 
-    const quotaInfo =
-        getGemini429Info(data);
+                    blockGeminiQuota();
 
-    console.warn(
-        "⚠️ Gemini Video 429:",
-        quotaInfo.message
-    );
-
-    // Only block when the daily quota is actually exhausted.
-    if (quotaInfo.dailyQuota) {
-
-        blockGeminiQuota();
-
-        return res.status(429).json({
-            success: false,
-            quota: true,
-            blocked: true,
-
-            message:
-                "Gemini daily Vision quota has been exhausted.",
-
-            retryAfter:
-                "24 hours"
-        });
-    }
-
-    // Temporary rate limit.
-    return res.status(429).json({
-        success: false,
-        quota: true,
-        blocked: false,
-
-        message:
-            "Gemini Video is temporarily rate limited.",
-
-        retryAfter:
-            "60 seconds"
-    });
-}
+                    return res.status(429).json({
+                        success: false,
+                        quota: true,
+                        blocked: true,
+                        message:
+                            "Gemini quota exhausted. Vision AI has been temporarily blocked.",
+                        retryAfter: "24 hours"
+                    });
+                }
 
                 if (!response.ok) {
                     lastError =
@@ -2163,7 +1951,7 @@ app.use(
             ) {
 
                 message =
-                    "File is too large. Maximum video size is 8 MB.";
+                    "File is too large. Maximum video size is 25 MB.";
             }
 
             if (
