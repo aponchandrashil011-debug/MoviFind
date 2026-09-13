@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://movifind.onrender.com/sitemap.xml
